@@ -14,13 +14,12 @@ from django.core.management.base import BaseCommand, CommandError
 
 from core.settings import env
 from movies.models import MotnGenre, MotnShow, MotnShowGenre
-import re
 
 streaming_availability_filter_url = "https://streaming-availability.p.rapidapi.com/shows/search/filters"
 
 headers = {
     "x-rapidapi-key": env("STREAMING_AVAILABILITY_API_KEY"),
-    "x-rapidapi-host": "streaming-availability.p.rapidapi.com"
+    "x-rapidapi-host": "streaming-availability.p.rapidapi.com",
 }
 
 default_querystring = {
@@ -28,16 +27,15 @@ default_querystring = {
     "series_granularity": "show",
     "order_direction": "desc",
     "order_by": "release_date",
-    "catalogs": "netflix"
+    "catalogs": "netflix",
 }
 
 
-NETFLIX_ID_RE = re.compile(r'https://www\.netflix\.com/(?:title|watch)/(\d+)/?')
+NETFLIX_ID_RE = re.compile(r"https://www\.netflix\.com/(?:title|watch)/(\d+)/?")
 BATCH_SIZE = 500
 
 
 class Command(BaseCommand):
-
     def handle(self, *args, **options):
         output_dir = settings.BASE_DIR / "data" / "motn"
         input_file = output_dir / "netflix-nl.jsonl.gz"
@@ -160,10 +158,9 @@ def paginated_request():
         response = requests.get(streaming_availability_filter_url, headers=headers, params=querystring)
         response.raise_for_status()
         json_response = response.json()
-        for item in json_response.get('shows', []):
-            yield item
-        if json_response['hasMore']:
-            querystring['cursor'] = json_response['nextCursor']
+        yield from json_response.get("shows", [])
+        if json_response["hasMore"]:
+            querystring["cursor"] = json_response["nextCursor"]
         else:
             break
 

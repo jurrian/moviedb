@@ -24,3 +24,16 @@ url = "https://download.pytorch.org/whl/cpu"
 members = [
     "benchmark",
 ]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+exclude = ["*/migrations/*.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"] # Error, Pyflakes, Isort, Bugbear, Pyupgrade
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

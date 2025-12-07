@@ -4,8 +4,7 @@ from django.conf import settings
 
 
 def get_app_version() -> str:
-    """Return the application version from pyproject.toml.
-    """
+    """Return the application version from pyproject.toml."""
     pyproject = settings.BASE_DIR / "pyproject.toml"
     if pyproject.is_file():
         with pyproject.open("rb") as fp:

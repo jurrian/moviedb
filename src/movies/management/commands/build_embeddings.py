@@ -1,10 +1,12 @@
-from typing import Iterable
+from collections.abc import Iterable
 
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandParser
 from openai import OpenAI
-from movies.models import MotnShow
+
 from core.settings import env
-from django.conf import settings
+from movies.models import MotnShow
+
 
 class Command(BaseCommand):
     help = "Compute embeddings for titles without embeddings"
@@ -34,7 +36,7 @@ class Command(BaseCommand):
         limit = options["limit"]
         offset = options["offset"]
 
-        qs = MotnShow.objects.exclude(overview='')[offset:]
+        qs = MotnShow.objects.exclude(overview="")[offset:]
         if limit is not None:
             qs = qs[:limit]
 
@@ -49,12 +51,12 @@ class Command(BaseCommand):
             batch_size = 256
 
         for start in range(0, total, batch_size):
-            batch = list(qs[start:start + batch_size])
+            batch = list(qs[start : start + batch_size])
             texts = [t.embedding_text for t in batch]
 
             embs = embed_fn(texts)
 
-            for obj, emb in zip(batch, embs):
+            for obj, emb in zip(batch, embs, strict=True):
                 obj.embedding = emb
                 obj.save(update_fields=["embedding"])
 
@@ -62,6 +64,8 @@ class Command(BaseCommand):
 
     def _embed_with_sentence_transformer(self, texts: Iterable[str]):
         if not hasattr(self, "_st_model"):
+            from sentence_transformers import SentenceTransformer
+
             self._st_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device="cpu")
 
         embeddings = self._st_model.encode(list(texts), normalize_embeddings=True)

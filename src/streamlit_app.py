@@ -7,6 +7,7 @@ import streamlit as st
 mlflow.openai.autolog()
 mlflow.set_experiment("my-genai-experiment")
 
+
 @st.cache_resource
 def django_setup():
     # Adjust these to point to your Django project
@@ -17,34 +18,43 @@ def django_setup():
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
     import django  # noqa: E402
+
     django.setup()
 
+
 django_setup()
+
 
 @st.cache_resource(show_spinner=False)
 def search_shows(*args, **kwargs):
     from movies.search import search_shows
+
     return search_shows(*args, **kwargs)
+
 
 st.set_page_config(
     page_title="MovieDB: AI-powered movie recommendations",
     page_icon="🎬",
     menu_items={
-        'Get Help': 'https://github.com/jurrian/moviedb',
-        'Report a bug': "https://github.com/jurrian/moviedb/issues",
-        'About': (
+        "Get Help": "https://github.com/jurrian/moviedb",
+        "Report a bug": "https://github.com/jurrian/moviedb/issues",
+        "About": (
             "## MovieDB\n"
             "AI-powered movie and series recommendations.\n\n"
             "Streamlit + Django app by Jurrian Tromp.\n\n"
             "Github: [github.com/jurrian/moviedb](http://github.com/jurrian/moviedb)"
-        )
-    }
+        ),
+    },
 )
 
 st.title("MovieDB")
 st.subheader("AI-powered Netflix NL recommendations")
 
-query = st.text_area("Describe what you want to watch:", height=100, value="gritty medieval series where a king fights vikings")
+query = st.text_area(
+    "Describe what you want to watch:",
+    height=100,
+    value="gritty medieval series where a king fights vikings",
+)
 
 top_k = st.slider("Number of results", min_value=5, max_value=50, value=10, step=5)
 
@@ -60,8 +70,7 @@ if st.button("Search") and query.strip():
         st.subheader("Results")
         for show in results:
             col1, col2 = st.columns([1, 3])
-            col1.image(show.poster_urls['w240'])
-
+            col1.image(show.poster_urls["w240"])
 
             meta_bits = []
             if show.show_type:
@@ -80,7 +89,11 @@ if st.button("Search") and query.strip():
                 st.write(show.overview)
 
             try:
-                col2.page_link(show.streaming_options['nl'][0]['videoLink'], label="Watch on Netflix", icon="▶️")
+                col2.page_link(
+                    show.streaming_options["nl"][0]["videoLink"],
+                    label="Watch on Netflix",
+                    icon="▶️",
+                )
             except (KeyError, IndexError):
                 pass
 

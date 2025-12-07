@@ -63,19 +63,17 @@ class Command(BaseCommand):
 
         try:
             total_rows, created_rows = self._process_file(source, batch_size, dry_run)
-        except (EOFError, OSError, gzip.BadGzipFile) as exc:
+        except (EOFError, OSError, gzip.BadGzipFile):
             if not using_default_source:
                 raise
 
-            self.stdout.write(
-                self.style.WARNING(
-                    "Dataset read failed; re-downloading default dataset and retrying."
-                )
-            )
+            self.stdout.write(self.style.WARNING("Dataset read failed; re-downloading default dataset and retrying."))
             source = self._download_default_dataset(force_download=True)
             total_rows, created_rows = self._process_file(source, batch_size, dry_run)
 
-        self.stdout.write(self.style.SUCCESS(f"Finished IMDb import. Rows read: {total_rows}, movies created: {created_rows}"))
+        self.stdout.write(
+            self.style.SUCCESS(f"Finished IMDb import. Rows read: {total_rows}, movies created: {created_rows}")
+        )
 
     def _process_file(self, source: pathlib.Path, batch_size: int, dry_run: bool) -> tuple[int, int]:
         open_fn = gzip.open if source.suffix == ".gz" else open
@@ -116,16 +114,20 @@ class Command(BaseCommand):
                     movie_genres.clear()
 
                 if total_rows and total_rows % PROGRESS_LOG_INTERVAL == 0:
-                    self.stdout.write(
-                        f"Processed {total_rows} rows; movies created so far: {created_rows}"
-                    )
+                    self.stdout.write(f"Processed {total_rows} rows; movies created so far: {created_rows}")
 
             if movies_to_create and not dry_run:
                 created_rows += self._bulk_insert(movies_to_create, movie_genres)
 
         return total_rows, created_rows
 
-    def _row_to_movie(self, row: list[str], title_types: dict[str, int], genres: dict[str, int], unknown_genre_id: int) -> tuple[ImdbMovie, list[int]] | None:
+    def _row_to_movie(
+        self,
+        row: list[str],
+        title_types: dict[str, int],
+        genres: dict[str, int],
+        unknown_genre_id: int,
+    ) -> tuple[ImdbMovie, list[int]] | None:
         try:
             (
                 tconst,
@@ -139,7 +141,7 @@ class Command(BaseCommand):
                 genres_str,
             ) = row
         except ValueError:
-            raise ValueError("Unexpected column count")
+            raise ValueError("Unexpected column count") from None
 
         title_type_id = self._get_title_type_id(title_type_name, title_types)
         genre_ids = self._get_genre_ids(genres_str, genres, unknown_genre_id)
@@ -206,9 +208,7 @@ class Command(BaseCommand):
             return 0
 
         imdb_ids = [movie.imdb_id for movie in movies]
-        existing_ids = set(
-            ImdbMovie.objects.filter(imdb_id__in=imdb_ids).values_list("imdb_id", flat=True)
-        )
+        existing_ids = set(ImdbMovie.objects.filter(imdb_id__in=imdb_ids).values_list("imdb_id", flat=True))
         new_ids = [mid for mid in imdb_ids if mid not in existing_ids]
 
         ImdbMovie.objects.bulk_create(
@@ -217,10 +217,7 @@ class Command(BaseCommand):
             ignore_conflicts=True,  # skip rows with existing imdb_id
         )
 
-        movie_map = {
-            m.imdb_id: m.id
-            for m in ImdbMovie.objects.filter(imdb_id__in=imdb_ids)
-        }
+        movie_map = {m.imdb_id: m.id for m in ImdbMovie.objects.filter(imdb_id__in=imdb_ids)}
 
         through_rows: list[ImdbMovieGenre] = []
         for imdb_id, genre_ids in movie_genres:
@@ -229,9 +226,7 @@ class Command(BaseCommand):
                 continue
 
             for genre_id in genre_ids:
-                through_rows.append(
-                    ImdbMovieGenre(movie_id=movie_id, genre_id=genre_id)
-                )
+                through_rows.append(ImdbMovieGenre(movie_id=movie_id, genre_id=genre_id))
 
         if through_rows:
             ImdbMovieGenre.objects.bulk_create(
@@ -249,22 +244,14 @@ class Command(BaseCommand):
         target = data_dir / pathlib.Path(DEFAULT_IMDB_URL).name
         if target.exists() and not force_download:
             if self._is_valid_gzip(target):
-                self.stdout.write(
-                    f"Using existing dataset at {target}"
-                )
+                self.stdout.write(f"Using existing dataset at {target}")
                 return target
 
-            self.stdout.write(
-                self.style.WARNING(
-                    "Existing dataset appears corrupted; re-downloading."
-                )
-            )
+            self.stdout.write(self.style.WARNING("Existing dataset appears corrupted; re-downloading."))
         elif target.exists() and force_download:
             target.unlink(missing_ok=True)
 
-        self.stdout.write(
-            f"Downloading default dataset to {target}"
-        )
+        self.stdout.write(f"Downloading default dataset to {target}")
         try:
             self._download_with_progress(DEFAULT_IMDB_URL, target)
         except Exception as exc:
@@ -291,9 +278,7 @@ class Command(BaseCommand):
             if percent >= 100 or percent - report.last_percent >= 5:
                 mb_done = downloaded / (1024 * 1024)
                 mb_total = total_size / (1024 * 1024)
-                self.stdout.write(
-                    f"Download progress: {percent}% ({mb_done:.1f}MB/{mb_total:.1f}MB)"
-                )
+                self.stdout.write(f"Download progress: {percent}% ({mb_done:.1f}MB/{mb_total:.1f}MB)")
                 report.last_percent = percent
 
         report.last_percent = -5

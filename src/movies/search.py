@@ -1,18 +1,14 @@
 import json
 
+import mlflow
 from django.conf import settings
 from openai import OpenAI
 from pgvector.django import CosineDistance
-import mlflow
 
 from core.settings import env
 from misc.utils.embedding import combine_query_and_user, get_user_embedding
+
 from .models import MotnGenre, MotnShow
-import math
-
-# TODO
-mlflow.set_tracking_uri("http://localhost:5000")
-
 
 SYSTEM_PROMPT = """
 You are a query parser for a movie/series recommender.
@@ -69,6 +65,7 @@ def embed_text(text: str):
 
 
 def parse_user_query(raw_query: str) -> dict:
+    # TODO: not used
     client = get_openai_client()
     available_genres = ",".join([x.name for x in MotnGenre.objects.all().order_by("name")])
     prompt = SYSTEM_PROMPT + f"<available_genres>{available_genres}</available_genres>"
@@ -134,8 +131,8 @@ def build_base_queryset(structured: dict):
 
 @mlflow.trace
 def search_shows(raw_query: str, top_k: int = 20, user=None, alpha: float = 0.5, user_embedding=None):
-    #structured = parse_user_query(raw_query)
-    #embedding_query_text = structured.get("embedding_query_text") or raw_query
+    # structured = parse_user_query(raw_query)
+    # embedding_query_text = structured.get("embedding_query_text") or raw_query
     embedding_query_text = raw_query
     structured = {}
 
@@ -153,50 +150,9 @@ def search_shows(raw_query: str, top_k: int = 20, user=None, alpha: float = 0.5,
 
     # Use q_vec (combined or just query) for the distance search
     qs = (
-        base_qs
-        .exclude(embedding__isnull=True)
+        base_qs.exclude(embedding__isnull=True)
         .annotate(distance=CosineDistance("embedding", q_vec))
         .order_by("distance")[:200]
     )
-    computer_score(qs)
 
     return qs, structured
-
-
-def compute_score(
-    sim_user: float,
-    sim_query: float,
-    tmdb_rating: float | None,
-    tmdb_vote_count: int | None,
-    watched: bool,
-    thumbs: int | None,
-    genre_overlap: float,
-) -> float:
-    # Normalize / fallback
-    rating = (rating or 0.0) / 10.0      # 0..1
-    #votes = tmdb_vote_count or 0
-    #popularity = math.log1p(votes) / 10.0     # squash big counts
-
-    # base from embeddings
-    score = 0.5 * sim_user + 0.3 * sim_query
-
-    # quality prior
-    score += 0.1 * rating
-    #score += 0.05 * popularity
-
-    # genre alignment (0..1)
-    score += 0.1 * genre_overlap
-
-    # user history adjustments
-    if watched:
-        score -= 0.5  # push watched items down but not out of the list
-
-    if thumbs is not None:
-        if thumbs == 2:   # way up
-            score += 0.4
-        elif thumbs == 1: # up
-            score += 0.2
-        elif thumbs == 0: # down
-            score -= 0.7  # strong penalty
-
-    return score

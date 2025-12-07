@@ -6,13 +6,12 @@ import tempfile
 import time
 from pathlib import Path
 
-import mlflow
-from mlflow.genai.scorers import RelevanceToQuery, scorer
-from mlflow.genai.judges import make_judge
-import environ
 import django
+import mlflow
+from mlflow.genai.scorers import scorer
 from openai import AsyncOpenAI
 
+mlflow.set_tracking_uri("sqlite:///mlflow.db")
 mlflow.set_experiment("query_recommends")
 mlflow.openai.autolog()
 
@@ -21,8 +20,8 @@ sys.path.append(str(Path(__file__).resolve().parent / ".." / "src"))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 django.setup()
 
-from movies.search import search_shows
-from movies.models import MotnShow
+from movies.models import MotnShow  # noqa: E402
+from movies.search import search_shows  # noqa: E402
 
 client = AsyncOpenAI()
 
@@ -48,12 +47,14 @@ STRICT PROHIBITIONS
 - DO NOT use numbers of any kind (no years, no seasons, no episode counts).
 - DO NOT copy phrases from the input description.
 - DO NOT copy phrases or adjectives from the example; they are ONLY illustrative.
-- DO NOT overuse any single adjective (for example, do not repeatedly use words like "gritty" or "epic" unless clearly justified by the description).
+- DO NOT overuse any single adjective (for example, do not repeatedly use words like
+  "gritty" or "epic" unless clearly justified by the description).
 
 VOCABULARY RULES
 - Choose adjectives and tone words that are clearly implied by the description.
 - Vary your wording across the 5 queries.
-- Avoid repeating the same descriptive word in more than 2 queries unless it appears multiple times in the description itself.
+- Avoid repeating the same descriptive word in more than 2 queries unless it appears
+  multiple times in the description itself.
 
 STYLE
 - Write in casual, natural language a typical user would type into a search box.
@@ -66,7 +67,8 @@ Return ONLY a JSON array of 5 strings, with no additional text.
 Example of STYLE ONLY (do NOT copy these exact words or adjectives):
 
 Description:
-"A gripping drama set in medieval England, following the lives of knights and royalty as they navigate political intrigue and epic battles."
+"A gripping drama set in medieval England, following the lives of knights and royalty as
+they navigate political intrigue and epic battles."
 
 Possible queries (STYLE EXAMPLE ONLY):
 [
@@ -153,11 +155,7 @@ def _run_bulk_completions(show_texts):
             data = json.loads(line)
             custom_id = data.get("custom_id")
             response_body = data.get("response", {}).get("body", {})
-            content = (
-                response_body.get("choices", [{}])[0]
-                .get("message", {})
-                .get("content")
-            )
+            content = response_body.get("choices", [{}])[0].get("message", {}).get("content")
             if not custom_id or content is None:
                 continue
             show_id = int(custom_id.replace("show-", ""))
@@ -173,19 +171,25 @@ def _run_bulk_completions(show_texts):
 
 @mlflow.trace
 def generate_user_queries(concurrency=5, prefer_batch=False, target_count=1000):
+    from django.db.models import Q
+
     # Check how many shows already have relevant_queries
-    existing_count = MotnShow.objects.exclude(relevant_queries=[]).count()
-    
+    # Must exclude None correctly
+    existing_count = MotnShow.objects.exclude(relevant_queries=[]).exclude(relevant_queries__isnull=True).count()
+
     if existing_count >= target_count:
         print(f"Already have {existing_count} shows with relevant_queries (target: {target_count}). Nothing to do.")
         return
-    
+
     # Calculate how many more we need
     needed = target_count - existing_count
     print(f"Found {existing_count} shows with relevant_queries. Generating for {needed} more to reach {target_count}.")
-    
+
+    # Filter for shows that have [] OR None
     shows = list(
-        MotnShow.objects.filter(relevant_queries=[]).prefetch_related("genres").order_by('?')[:needed]
+        MotnShow.objects.filter(Q(relevant_queries=[]) | Q(relevant_queries__isnull=True))
+        .prefetch_related("genres")
+        .order_by("?")[:needed]
     )
 
     if not shows:
@@ -257,7 +261,7 @@ def rank_score(outputs, expectations) -> float:
         idx = outputs.index(target)
     except ValueError:
         # Target not present -> treat as 'no score' by raising
-        raise ValueError("rank_score: target show not present in outputs")
+        raise ValueError("rank_score: target show not present in outputs") from None
 
     n = len(outputs)
     if n == 1:
@@ -275,17 +279,25 @@ def predict_fn(query: str) -> list[str]:
 
 def evaluate_search_shows(target_count=100):
     shows = list(
-        MotnShow.objects.exclude(relevant_queries=[]).order_by('?')[:target_count]
+        MotnShow.objects.exclude(relevant_queries=[])
+        .exclude(relevant_queries__isnull=True)
+        .order_by("?")[:target_count]
     )
+    if not shows:
+        print("No shows with relevant_queries found for evaluation.")
+        return
+
     eval_dataset = []
     for show in shows:
-        for query in show.relevant_queries:
-            eval_dataset.append({
-                "inputs": {"query": query},
-                "expectations": {"target_show": str(show)},
-            })
+        for query in show.relevant_queries or []:
+            eval_dataset.append(
+                {
+                    "inputs": {"query": query},
+                    "expectations": {"target_show": str(show)},
+                }
+            )
 
-    mlflow.set_tag("mlflow.runName", "evaluate_1000_random")
+    mlflow.set_tag("mlflow.runName", "evaluate_random")
     mlflow.genai.evaluate(
         data=eval_dataset,
         predict_fn=predict_fn,
@@ -294,6 +306,6 @@ def evaluate_search_shows(target_count=100):
 
 
 if __name__ == "__main__":
-    target_count = 1000
+    target_count = 50
     generate_user_queries(target_count=target_count)
     evaluate_search_shows(target_count=target_count)

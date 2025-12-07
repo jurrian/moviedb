@@ -16,8 +16,7 @@ class MotnShow(models.Model):
     motn_id = models.CharField(
         max_length=64,
         unique=True,
-        help_text="Show identifier as used by Streaming Availability API "
-                  "(often IMDb or TMDb id).",
+        help_text="Show identifier as used by Streaming Availability API (often IMDb or TMDb id).",
     )
     source_id = models.BigIntegerField(
         unique=True,
@@ -52,15 +51,11 @@ class MotnShow(models.Model):
 
     # IDs and ratings
     imdb_id = models.CharField(max_length=32, blank=True)
-    imdb_rating = models.DecimalField(
-        max_digits=4, decimal_places=2, null=True, blank=True
-    )
+    imdb_rating = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
     imdb_vote_count = models.IntegerField(null=True, blank=True)
 
     tmdb_id = models.IntegerField(null=True, blank=True)
-    tmdb_rating = models.DecimalField(
-        max_digits=4, decimal_places=2, null=True, blank=True
-    )
+    tmdb_rating = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
 
     # Localization / taxonomy
     original_language = models.CharField(max_length=8, blank=True)

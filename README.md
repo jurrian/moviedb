@@ -89,6 +89,20 @@ We welcome contributions! 🎉 Whether you're fixing bugs, improving documentati
 
 **Special focus area:** We especially welcome improvements to the recommendation system! See the [benchmarking guide](benchmark/README.md) to learn how to validate your improvements.
 
+## Code Quality
+
+This project uses [Ruff](https://docs.astral.sh/ruff/) for linting and formatting.
+
+To format code:
+```bash
+ruff format .
+```
+
+To run linting checks (and fix fixable issues):
+```bash
+ruff check --fix .
+```
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

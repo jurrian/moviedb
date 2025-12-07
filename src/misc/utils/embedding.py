@@ -1,4 +1,5 @@
 import numpy as np
+
 from movies.models import UserViewInteraction
 
 
@@ -14,16 +15,16 @@ def calculate_user_embedding(interactions_data):
     embs = []
     weights = []
 
-    for inter in interactions_data:
+    for i, inter in enumerate(interactions_data):
         # Handle both object attribute or dict access (flexible for tests)
         if isinstance(inter, dict):
             # For dict, we assume structure like {'show': {'embedding': ...}, 'rating': ...}
-            rating = inter.get('rating')
-            show_emb = inter.get('show', {}).get('embedding')
+            rating = inter.get("rating")
+            show_emb = inter.get("show", {}).get("embedding")
         else:
             rating = inter.rating
             show_emb = inter.show.embedding
-        
+
         if show_emb is None:
             continue
 
@@ -45,8 +46,8 @@ def calculate_user_embedding(interactions_data):
     if not embs:
         return None
 
-    embs = np.stack(embs)            # shape (n, d)
-    weights = np.array(weights)      # shape (n,)
+    embs = np.stack(embs)  # shape (n, d)
+    weights = np.array(weights)  # shape (n,)
 
     user_vec = np.average(embs, axis=0, weights=weights)
     # normalize
@@ -59,15 +60,13 @@ def calculate_user_embedding(interactions_data):
 
 
 def get_user_embedding(user_id: int, min_items: int = 3):
-    interactions = (
-        UserViewInteraction.objects
-        .filter(user_id=user_id, show__embedding__isnull=False)
-        .select_related("show")
+    interactions = UserViewInteraction.objects.filter(user_id=user_id, show__embedding__isnull=False).select_related(
+        "show"
     )
 
     if interactions.count() < min_items:
         return None  # not enough data – fall back to query-only
-        
+
     return calculate_user_embedding(interactions)
 
 
@@ -81,4 +80,3 @@ def combine_query_and_user(q_vec, u_vec, alpha: float = 0.5):
         return q_vec
     combo = combo / norm
     return combo.tolist()
-
