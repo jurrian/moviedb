@@ -14,6 +14,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from core.settings import env
 from movies.models import MotnGenre, MotnShow, MotnShowGenre
+import re
 
 streaming_availability_filter_url = "https://streaming-availability.p.rapidapi.com/shows/search/filters"
 
@@ -30,6 +31,8 @@ default_querystring = {
     "catalogs": "netflix"
 }
 
+
+NETFLIX_ID_RE = re.compile(r'https://www\.netflix\.com/(?:title|watch)/(\d+)/?')
 BATCH_SIZE = 500
 
 
@@ -182,14 +185,22 @@ def to_motn_show(show: dict) -> tuple[MotnShow | None, list[str]]:
             continue
         genres.append(str(name).strip())
 
+    source_id = None
+    m = NETFLIX_ID_RE.search(str(show.get("streamingOptions", "")))
+    if m:
+        source_id = int(m.group(1))
+
     return MotnShow(
         motn_id=motn_id,
+        source_id=source_id,
         title=show.get("title") or "",
         original_title=show.get("originalTitle") or "",
         overview=show.get("overview") or "",
         show_type=show.get("showType") or "",
         year=parse_int(show.get("releaseYear") or show.get("firstAirYear") or show.get("year")),
         runtime=parse_int(show.get("runtime")),
+        season_count=parse_int(show.get("seasonCount")),
+        episode_count=parse_int(show.get("episodeCount")),
         age_certification=str(age_val) if age_val not in (None, "") else "",
         imdb_id=show.get("imdbId") or "",
         imdb_rating=parse_rating(show.get("imdbRating") or show.get("rating")),
