@@ -15,9 +15,12 @@ env = environ.Env(
 # Resolves to the src dir
 BASE_DIR = Path(__file__).resolve().parents[2]
 
-# Only read .env if the env vars are not defined somewhere else
 if (BASE_DIR / ".env").is_file():
     environ.Env.read_env(env_file=BASE_DIR / ".env")
+
+# PGDATABASE and POSTGRES_DB for different db on branch switching
+if (BASE_DIR / ".env.branch").is_file():
+    environ.Env.read_env(env_file=BASE_DIR / ".env.branch")
 
 SECRET_KEY = env("SECRET_KEY")
 

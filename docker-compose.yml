@@ -7,13 +7,14 @@ services:
       - "127.0.0.1:8501:8501"
     volumes:
       # - ./src:/app/src  # uncomment for local development
-      - ./data:/app/data  # to persist data locally
+      - ./data:/app/data # to persist data locally
       # - data:/app/data  # persist data in Docker volume (production)
     environment:
       - SERVICE_NAME=streamlit
       - PGHOST=postgres
     env_file:
       - .env
+      - .env.branch
     restart: no
 
   postgres:
@@ -25,6 +26,7 @@ services:
       - postgres:/var/lib/postgresql
     env_file:
       - .env
+      - .env.branch
     environment:
       - SERVICE_NAME=postgres
     shm_size: 1g

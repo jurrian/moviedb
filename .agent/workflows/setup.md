@@ -20,6 +20,8 @@ Copy the default environment file and configure it:
 
 ```bash
 cp .env-default .env
+chmod +x scripts/switch_db_branch.sh
+./scripts/switch_db_branch.sh
 ```
 
 **Important**: Open the `.env` file and fill in a value for the `SECRET_KEY` variable.

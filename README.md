@@ -45,6 +45,7 @@ The easiest way to get started is using [Antigravity](https://antigravity.dev/) 
 Set up environment variables and Nginx configuration:
 ```bash
 cp .env-default .env
+touch .env.branch
 # Fill a value for the SECRET_KEY variable in the .env file
 
 cp nginx/moviedb.conf /etc/nginx/sites-enabled/moviedb.conf
@@ -59,6 +60,21 @@ To populate and run the application:
 docker compose up --build -d
 docker compose exec -it streamlit bash
 
+### Database Branch Switching
+
+To automatically switch databases when changing branches, set up a Git hook:
+
+# Symlink the hook script
+ln -s scripts/switch_db_branch.sh .git/hooks/post-checkout
+
+# Execute it once to set up the environment
+chmod +x scripts/switch_db_branch.sh
+./scripts/switch_db_branch.sh
+```
+
+### Running the App
+
+```bash
 uv run src/manage.py migrate
 
 # Add initial data
