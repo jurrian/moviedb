@@ -145,3 +145,6 @@ NUMBER_GROUPING = 3
 
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-large"
 OPENAI_EMBEDDING_DIM = 3072
+
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+PUBLIC_URL = "http://localhost:8501"

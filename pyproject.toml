@@ -15,6 +15,7 @@ dependencies = [
     "openai>=2.8.1",
     "mlflow>=3.6.0",
     "python-dateutil>=2.9.0.post0",
+    "streamlit-cookies-manager-v2>=0.3.1",
 ]
 
 [[tool.uv.index]]
