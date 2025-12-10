@@ -13,4 +13,4 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 COPY src /app/src
 
-CMD ["uv", "run", "streamlit", "run", "/app/src/streamlit_app.py"]
+CMD ["uv", "run", "streamlit", "run", "/app/src/streamlit_app/main.py"]

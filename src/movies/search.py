@@ -149,13 +149,35 @@ def search_shows(raw_query: str, top_k: int = 20, user=None, alpha: float = 0.5,
     base_qs = build_base_queryset(structured)
 
     # Use q_vec (combined or just query) for the distance search
-    qs = (
+    # Execute query and convert to list to cache results and get IDs
+    results = list(
         base_qs.exclude(embedding__isnull=True)
         .annotate(distance=CosineDistance("embedding", q_vec))
         .order_by("distance")[:top_k]
     )
 
-    return qs, structured
+    # Log the query for analytics
+    try:
+        from .models import UserQueryLog
+        from django.contrib.auth import get_user_model
+        
+        # Ensure user is a model instance or None (if it's an ID or SimpleLazyObject handle appropriately)
+        log_user = user if (user and user.is_authenticated) else None
+        
+        # Extract IDs
+        result_ids = [r.id for r in results]
+        
+        UserQueryLog.objects.create(
+            user=log_user,
+            query=raw_query,
+            top_k=top_k,
+            result_ids=result_ids,
+            result_metadata_dump={"structured": structured, "alpha": alpha},
+        )
+    except Exception as e:
+        print(f"Error logging query: {e}")
+
+    return results, structured
 
 
 def update_user_recommendations(user):

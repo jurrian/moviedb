@@ -17,9 +17,9 @@ coverage.xml
 db.sqlite3
 
 data/
-mlruns/
-benchmark/mlartifacts/
-benchmark/mlflow.db
+**/mlruns/
+**/mlartifacts/
+**/mlflow.db
 
 # Allow baseline exports to be committed
 !benchmark/baseline/

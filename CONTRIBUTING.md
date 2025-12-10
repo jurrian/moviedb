@@ -102,7 +102,7 @@ Use descriptive branch names:
 uv run pytest
 
 # Test manually with the Streamlit app
-uv run streamlit run src/streamlit_app.py
+uv run streamlit run src/main.py
 
 # For recommendation changes: run benchmarks (see below)
 ```

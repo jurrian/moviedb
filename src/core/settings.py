@@ -5,11 +5,18 @@ import environ
 env = environ.Env(
     # set casting, default value
     DEBUG=(bool, False),
+    PUBLIC_SCHEME=(str, "http"),
+    PUBLIC_HOSTNAME=(str, "localhost"),
     PGDATABASE=(str, "postgres"),
     PGUSER=(str, "postgres"),
     PGPASSWORD=(str, "postgres"),
     PGHOST=(str, "localhost"),
     PGPORT=(int, 5432),
+    EMAIL_HOST=(str, None),
+    EMAIL_PORT=(int, 587),
+    EMAIL_USE_TLS=(bool, True),
+    EMAIL_HOST_USER=(str, ""),
+    EMAIL_HOST_PASSWORD=(str, ""),
 )
 
 # Resolves to the src dir
@@ -27,6 +34,10 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
 
 ALLOWED_HOSTS = []
+
+PUBLIC_SCHEME = env("PUBLIC_SCHEME")
+PUBLIC_HOSTNAME = env("PUBLIC_HOSTNAME")
+PUBLIC_URL = f"{PUBLIC_SCHEME}://{PUBLIC_HOSTNAME}"
 
 
 # Application definition
@@ -146,9 +157,19 @@ DATE_FORMAT = "j M Y"
 DATETIME_FORMAT = "j M Y, G:i T"
 NUMBER_GROUPING = 3
 
+# Email settings
+if env("EMAIL_HOST"):
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = env("EMAIL_HOST")
+    EMAIL_PORT = env("EMAIL_PORT")
+    EMAIL_USE_TLS = env("EMAIL_USE_TLS")
+    EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+    EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+
+# Application settings
 
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-large"
 OPENAI_EMBEDDING_DIM = 3072
-
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-PUBLIC_URL = "http://localhost:8501"

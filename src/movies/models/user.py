@@ -27,3 +27,19 @@ class UserRecommendation(models.Model):
 
     def __str__(self):
         return f"Recommendations for {self.user} (updated {self.updated_at})"
+
+
+class UserQueryLog(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    query = models.TextField()
+    top_k = models.IntegerField(default=50)
+    
+    # Store just the IDs of the results to save space, or a small JSON dump
+    result_ids = models.JSONField(default=list)
+    result_metadata_dump = models.JSONField(default=dict, blank=True, help_text="Search metadata like structured query")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        user_str = self.user.username if self.user else "Anonymous"
+        return f"[{self.created_at}] {user_str}: {self.query[:50]}"

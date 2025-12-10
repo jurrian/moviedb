@@ -1,5 +1,5 @@
 services:
-  streamlit:
+  production:
     build:
       context: .
       dockerfile: Dockerfile
@@ -10,7 +10,25 @@ services:
       - ./data:/app/data # to persist data locally
       # - data:/app/data  # persist data in Docker volume (production)
     environment:
-      - SERVICE_NAME=streamlit
+      - SERVICE_NAME=streamlit_production
+      - PGHOST=postgres
+    env_file:
+      - .env
+      - .env.branch
+    restart: no
+
+  develop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8502:8501"
+    volumes:
+      # - ./src:/app/src  # uncomment for local development
+      - ./data:/app/data # to persist data locally
+      # - data:/app/data  # persist data in Docker volume (production)
+    environment:
+      - SERVICE_NAME=streamlit_develop
       - PGHOST=postgres
     env_file:
       - .env

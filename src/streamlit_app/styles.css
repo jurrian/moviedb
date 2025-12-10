@@ -1,0 +1,170 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
+html,
+body,
+.stApp,
+.stMarkdown,
+.stButton,
+.stTextInput,
+.stTextArea {
+    font-family: 'Outfit', sans-serif !important;
+}
+
+.title-container {
+    text-align: center;
+    padding: 3rem 0 1.5rem 0;
+}
+
+.gradient-title {
+    background: linear-gradient(90deg, #E50914 0%, #FF6B6B 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 3.5rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.2rem;
+    /* Ensure descenders aren't cut off */
+}
+
+.subtitle {
+    font-size: 1.2rem;
+    color: var(--text-color);
+    opacity: 0.8;
+    font-weight: 300;
+}
+
+/* Example Buttons (Secondary): Subtle and small */
+div[data-testid="stButton"] button[kind="secondary"] {
+    border-radius: 8px !important;
+    font-weight: 400 !important;
+    text-align: left !important;
+    height: auto !important;
+    font-size: 0.9rem !important;
+    /* Smaller text */
+    white-space: normal !important;
+    padding: 0.5rem 0.8rem !important;
+    border: 1px solid var(--secondary-background-color) !important;
+    background-color: transparent !important;
+    /* Blend with background */
+    color: var(--text-color) !important;
+    transition: all 0.2s !important;
+    width: 100%;
+}
+
+div[data-testid="stButton"] button[kind="secondary"]:hover {
+    border-color: #E50914 !important;
+    color: #E50914 !important;
+    background-color: var(--secondary-background-color) !important;
+}
+
+/* Search Bar Prominence: Dominant */
+div[data-testid="stTextArea"] textarea {
+    background-color: var(--secondary-background-color) !important;
+    border: 2px solid var(--secondary-background-color) !important;
+    /* Thicker border */
+    font-size: 1.2rem !important;
+    /* Larger text */
+    border-radius: 16px !important;
+    padding: 1.5rem !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+div[data-testid="stTextArea"] textarea:focus {
+    border-color: #E50914 !important;
+    box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.3) !important;
+}
+
+/* Primary "Find Movies" Button: Very Clear */
+div[data-testid="stButton"] button[kind="primary"] {
+    background-color: #E50914 !important;
+    background-image: none !important;
+    color: white !important;
+    border: none !important;
+    padding: 0.8rem 2rem !important;
+    font-size: 1.3rem !important;
+    font-weight: 700 !important;
+    border-radius: 50px !important;
+    /* Pill shape */
+    transition: transform 0.1s ease !important;
+    box-shadow: 0 4px 12px rgba(229, 9, 20, 0.4) !important;
+    width: 100%;
+    /* Make it fill container */
+}
+
+/* Force inner elements (like text container) to be transparent */
+div[data-testid="stButton"] button[kind="primary"] * {
+    background-color: transparent !important;
+    background-image: none !important;
+    color: white !important;
+}
+
+div[data-testid="stButton"] button[kind="primary"]:hover {
+    background-color: #f40612 !important;
+    background-image: none !important;
+    transform: scale(1.02);
+}
+
+div[data-testid="stButton"] button[kind="primary"]:active {
+    transform: scale(0.98);
+}
+
+/* Result Card styling */
+/* We target the container we create in python, but here we can try to target specific Streamlit block structure */
+/* Note: Streamlit DOM classes are unstable, but data-testid are reliable-ish */
+
+div[data-testid="stVerticalBlock"]>div[data-testid="stHorizontalBlock"] {
+    background-color: var(--secondary-background-color);
+    border-radius: 12px;
+    padding: 15px;
+    border: 1px solid rgba(128, 128, 128, 0.1);
+    margin-bottom: 1rem;
+    transition: all 0.2s ease-in-out;
+}
+
+div[data-testid="stVerticalBlock"]>div[data-testid="stHorizontalBlock"]:hover {
+    border-color: #E50914;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.version-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    color: var(--text-color);
+    opacity: 0.6;
+    font-family: monospace;
+    font-size: 0.8rem;
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--secondary-background-color);
+}
+
+.github-link {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: inherit;
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+
+.github-link:hover {
+    opacity: 1;
+    color: #E50914;
+}
+
+.github-link svg {
+    fill: currentColor;
+    width: 16px;
+    height: 16px;
+}
+
+/* Hide Streamlit Deploy Button */
+.stDeployButton,
+[data-testid="stDeployButton"] {
+    display: none !important;
+    visibility: hidden !important;
+}

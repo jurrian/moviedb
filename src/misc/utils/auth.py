@@ -19,9 +19,9 @@ def send_magic_link_email(email):
     link = f"{settings.PUBLIC_URL}/login?email={email}&pin={pin}"
 
     send_mail(
-        "Your Magic Login Link",
+        "MovieDB Magic Login Link",
         (
-            f"Click here to login on moviedb.nl: {link}\n\n"
+            f"Click here to login on MovieDB: {link}\n\n"
             "This link is valid forever and can be used to login at any time."
             "Bookmark this link for easy access."
         ),

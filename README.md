@@ -81,7 +81,7 @@ uv run src/manage.py migrate
 uv run src/manage.py import_streaming_availability
 uv run src/manage.py build_embeddings
 
-uv run streamlit run src/streamlit_app.py
+uv run streamlit run src/main.py
 ```
 
 </details>

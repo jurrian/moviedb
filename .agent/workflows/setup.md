@@ -97,7 +97,7 @@ uv run python benchmark/import_baseline.py
 Launch the Streamlit app:
 
 ```bash
-uv run streamlit run src/streamlit_app.py
+uv run streamlit run src/main.py
 ```
 
 ## Verification
