@@ -1,19 +1,56 @@
 services:
-  streamlit:
+  # moviedb.nl
+  production:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "127.0.0.1:8501:8501"
     volumes:
-      # - ./src:/app/src  # uncomment for local development
-      - ./data:/app/data  # to persist data locally
-      # - data:/app/data  # persist data in Docker volume (production)
+      - ./data:/app/data
     environment:
-      - SERVICE_NAME=streamlit
+      - SERVICE_NAME=streamlit_production
+      - PGHOST=postgres
+      - PGDATABASE=moviedb_production
+      - POSTGRES_DB=moviedb_production
+    env_file:
+      - .env
+    restart: no
+
+  # dev.moviedb.nl
+  develop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8502:8501"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - SERVICE_NAME=streamlit_develop
+      - PGHOST=postgres
+      - PGDATABASE=moviedb_develop
+      - POSTGRES_DB=moviedb_develop
+    env_file:
+      - .env
+    restart: no
+
+  # localhost:8501
+  local:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8501:8501"
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+    environment:
+      - SERVICE_NAME=streamlit_local
       - PGHOST=postgres
     env_file:
       - .env
+      - .env.branch
     restart: no
 
   postgres:
@@ -31,4 +68,5 @@ services:
 
 volumes:
   postgres:
-  data:
+
+

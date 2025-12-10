@@ -14,9 +14,8 @@ Usage:
 import argparse
 import gzip
 import json
-import os
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 
 def iter_json_files(input_dir: Path, pattern: str = "*.json") -> Iterable[Path]:
@@ -62,9 +61,7 @@ def combine_to_gzip_jsonl(input_dir: Path, output_path: Path, pattern: str = "*.
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Combine many JSON files into one gzip-compressed JSONL file."
-    )
+    parser = argparse.ArgumentParser(description="Combine many JSON files into one gzip-compressed JSONL file.")
     parser.add_argument(
         "--input-dir",
         required=True,

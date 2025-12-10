@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.postgres.fields.array import ArrayField
 from django.db import models
 from pgvector.django import VectorField
 
@@ -15,8 +16,13 @@ class MotnShow(models.Model):
     motn_id = models.CharField(
         max_length=64,
         unique=True,
-        help_text="Show identifier as used by Streaming Availability API "
-                  "(often IMDb or TMDb id).",
+        help_text="Show identifier as used by Streaming Availability API (often IMDb or TMDb id).",
+    )
+    source_id = models.BigIntegerField(
+        unique=True,
+        null=True,
+        blank=True,
+        help_text="Identifier of the external streaming source (e.g. Netflix)",
     )
 
     # Basic metadata
@@ -29,7 +35,7 @@ class MotnShow(models.Model):
         blank=True,
         help_text="Type of show, e.g. 'movie' or 'series'.",
     )
-    year = models.PositiveIntegerField(null=True, blank=True)
+    year = models.PositiveIntegerField(null=True, blank=True)  # TODO firstAirYear, lastAirYear
     runtime = models.PositiveIntegerField(
         null=True,
         blank=True,
@@ -40,18 +46,16 @@ class MotnShow(models.Model):
         blank=True,
         help_text="Age rating / certification (e.g. 'PG-13', 'TV-MA').",
     )
+    season_count = models.SmallIntegerField(null=True, blank=True)
+    episode_count = models.SmallIntegerField(null=True, blank=True)
 
     # IDs and ratings
     imdb_id = models.CharField(max_length=32, blank=True)
-    imdb_rating = models.DecimalField(
-        max_digits=4, decimal_places=2, null=True, blank=True
-    )
+    imdb_rating = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
     imdb_vote_count = models.IntegerField(null=True, blank=True)
 
     tmdb_id = models.IntegerField(null=True, blank=True)
-    tmdb_rating = models.DecimalField(
-        max_digits=4, decimal_places=2, null=True, blank=True
-    )
+    tmdb_rating = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
 
     # Localization / taxonomy
     original_language = models.CharField(max_length=8, blank=True)
@@ -102,10 +106,14 @@ class MotnShow(models.Model):
         help_text="Map of country code -> list of streaming options.",
     )
 
+    # Generated
+
     embedding = VectorField(dimensions=settings.OPENAI_EMBEDDING_DIM, null=True, blank=True)
     # plot_embedding = VectorField(dimensions=settings.OPENAI_EMBEDDING_DIM, null=True, blank=True)
     # meta_embedding = VectorField(dimensions=settings.OPENAI_EMBEDDING_DIM, null=True, blank=True)
     # tone_embedding = VectorField(dimensions=settings.OPENAI_EMBEDDING_DIM, null=True, blank=True)
+
+    relevant_queries = ArrayField(models.CharField(max_length=120, blank=True), null=True)
 
     # Bookkeeping
     added_at = models.DateTimeField(auto_now_add=True)
@@ -122,7 +130,10 @@ class MotnShow(models.Model):
         ]
 
     def __str__(self) -> str:
-        return self.title
+        return f"{self.title} ({self.year or 'n/a'})"
+
+    def __repr__(self):
+        return f"<{self.id}: {self}>"
 
     def _normalize_list_field(self, value):
         """

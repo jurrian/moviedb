@@ -1,6 +1,7 @@
 .venv/
 venv/
 .env
+.env.branch
 
 __pycache__/
 *.py[cod]
@@ -14,4 +15,11 @@ coverage.xml
 .idea/
 
 db.sqlite3
+
 data/
+**/mlruns/
+**/mlartifacts/
+**/mlflow.db
+
+# Allow baseline exports to be committed
+!benchmark/baseline/

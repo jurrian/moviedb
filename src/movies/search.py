@@ -1,0 +1,217 @@
+import json
+
+import mlflow
+from django.conf import settings
+from openai import OpenAI
+from pgvector.django import CosineDistance
+
+from core.settings import env
+from misc.utils.embedding import combine_query_and_user, get_user_embedding
+
+from .models import MotnGenre, MotnShow, UserRecommendation, UserViewInteraction
+
+SYSTEM_PROMPT = """
+You are a query parser for a movie/series recommender.
+
+You receive a short English request and output **only one JSON object**:
+
+{
+  "intent": "find_tv_series" | "find_movie" | "find_any",
+  "must_genres": [string],
+  "should_genres": [string],
+  "exclude_genres": [string],
+  "must_be_series": boolean,
+  "must_be_movie": boolean,
+  "min_year": number | null,
+  "max_year": number | null,
+  "tone": [string],
+  "keywords": [string],
+  "embedding_query_text": string
+}
+
+Constraints:
+- Only use genres listed inside <available_genres> for must_genres, should_genres, exclude_genres.
+- Infer preference for series/movie:
+  - explicit request → set must_be_series or must_be_movie true.
+  - no preference → both false.
+- "intent":
+  - explicit series → "find_tv_series"
+  - explicit movie → "find_movie"
+  - unclear → "find_any"
+- Infer must_genres and should_genres from wording.
+- Infer exclude_genres from implicit conflicts.
+- Detect tone (e.g., dark, gritty, violent, comedic) and include in "tone".
+- Extract non-genre topical keywords to "keywords".
+- Extract year constraints if given; else null.
+- embedding_query_text: short natural-language summary including format (movie/series) and tone if relevant.
+
+Output rules:
+- Only valid JSON.
+- No text outside the JSON.
+- No genres outside those in <available_genres>.
+
+
+"""
+
+
+def get_openai_client():
+    return OpenAI(api_key=env("OPENAI_API_KEY"))
+
+
+def embed_text(text: str):
+    client = get_openai_client()
+    response = client.embeddings.create(model=settings.OPENAI_EMBEDDING_MODEL, input=[text])
+    return response.data[0].embedding
+
+
+def parse_user_query(raw_query: str) -> dict:
+    # TODO: not used
+    client = get_openai_client()
+    available_genres = ",".join([x.name for x in MotnGenre.objects.all().order_by("name")])
+    prompt = SYSTEM_PROMPT + f"<available_genres>{available_genres}</available_genres>"
+
+    model = "gpt-5-nano"
+    # mlflow.log_model_params({
+    #     "prompt_template": prompt,
+    #     "llm": model,
+    # })
+
+    resp = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": raw_query},
+        ],
+        response_format={"type": "json_object"},
+    )
+    content = resp.choices[0].message.content
+    return json.loads(content)
+
+
+def _clean_genre_list(genres):
+    cleaned = []
+    for g in genres or []:
+        if g is None:
+            continue
+        name = str(g).strip()
+        if name:
+            cleaned.append(name)
+    return cleaned
+
+
+def build_base_queryset(structured: dict):
+    qs = MotnShow.objects.all()
+
+    # # must_be_series / must_be_movie
+    # if structured.get("must_be_series"):
+    #     qs = qs.filter(show_type__iexact="series")
+    # elif structured.get("must_be_movie"):
+    #     qs = qs.filter(show_type__iexact="movie")
+    #
+    # # hard genre includes/excludes (MotnGenre M2M)
+    # for genre in _clean_genre_list(structured.get("must_genres")):
+    #     qs = qs.filter(genres__name__iexact=genre)
+    #
+    # # should_genres = _clean_genre_list(structured.get("should_genres"))
+    # # if should_genres:
+    # #     qs = qs.filter(genres__name__in=should_genres)
+    #
+    # for genre in _clean_genre_list(structured.get("exclude_genres")):
+    #     qs = qs.exclude(genres__name__iexact=genre)
+    #
+    # # optional: min_year / max_year
+    # min_year = structured.get("min_year")
+    # max_year = structured.get("max_year")
+    # if min_year:
+    #     qs = qs.filter(year__gte=min_year)
+    # if max_year:
+    #     qs = qs.filter(year__lte=max_year)
+    return qs.distinct()
+
+
+@mlflow.trace
+def search_shows(raw_query: str, top_k: int = 20, user=None, alpha: float = 0.5, user_embedding=None):
+    # structured = parse_user_query(raw_query)
+    # embedding_query_text = structured.get("embedding_query_text") or raw_query
+    embedding_query_text = raw_query
+    structured = {}
+
+    # embed the structured query text
+    q_vec = embed_text(embedding_query_text)
+
+    u_vec = user_embedding
+    if u_vec is None and user is not None:
+        u_vec = get_user_embedding(user)
+
+    if u_vec is not None:
+        q_vec = combine_query_and_user(q_vec, u_vec, alpha=alpha)
+
+    base_qs = build_base_queryset(structured)
+
+    # Use q_vec (combined or just query) for the distance search
+    # Execute query and convert to list to cache results and get IDs
+    results = list(
+        base_qs.exclude(embedding__isnull=True)
+        .annotate(distance=CosineDistance("embedding", q_vec))
+        .order_by("distance")[:top_k]
+    )
+
+    # Log the query for analytics
+    try:
+        from .models import UserQueryLog
+        from django.contrib.auth import get_user_model
+        
+        # Ensure user is a model instance or None (if it's an ID or SimpleLazyObject handle appropriately)
+        log_user = user if (user and user.is_authenticated) else None
+        
+        # Extract IDs
+        result_ids = [r.id for r in results]
+        
+        UserQueryLog.objects.create(
+            user=log_user,
+            query=raw_query,
+            top_k=top_k,
+            result_ids=result_ids,
+            result_metadata_dump={"structured": structured, "alpha": alpha},
+        )
+    except Exception as e:
+        print(f"Error logging query: {e}")
+
+    return results, structured
+
+
+def update_user_recommendations(user):
+    """
+    Recalculates recommendations for the user based solely on their interactions.
+    Saves the result to UserRecommendation model.
+    """
+    if not user.is_authenticated:
+        return
+
+    # 1. Get user embedding based on interactions
+    u_vec = get_user_embedding(user)
+    
+    if not u_vec:
+        # If no embedding (e.g. no history), clear recommendations
+        UserRecommendation.objects.update_or_create(
+             user=user,
+             defaults={'recommended_shows': []}
+        )
+        return
+
+    # 2. Find shows similar to this embedding
+    # Exclude shows the user has already interacted with
+    watched_ids = UserViewInteraction.objects.filter(user=user).values_list('show_id', flat=True)
+    
+    qs = MotnShow.objects.exclude(id__in=watched_ids).exclude(embedding__isnull=True)
+    
+    # We use the user vector directly for similarity search
+    qs = qs.annotate(distance=CosineDistance("embedding", u_vec)).order_by("distance")[:50]
+    
+    recommended_ids = list(qs.values_list('id', flat=True))
+    
+    # 3. Save to UserRecommendation
+    UserRecommendation.objects.update_or_create(
+        user=user,
+        defaults={'recommended_shows': recommended_ids}
+    )

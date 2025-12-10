@@ -1,6 +1,6 @@
 [project]
 name = "moviedb"
-version = "1.0.1"
+version = "1.1.0"
 description = "AI-powered movie recommendation application"
 requires-python = ">=3.13"
 dependencies = [
@@ -13,7 +13,29 @@ dependencies = [
     "torch>=2.9.1",
     "streamlit>=1.51.0",
     "openai>=2.8.1",
+    "mlflow>=3.6.0",
+    "python-dateutil>=2.9.0.post0",
+    "streamlit-cookies-manager-v2>=0.3.1",
+    "sentry-sdk>=2.47.0",
 ]
 
 [[tool.uv.index]]
 url = "https://download.pytorch.org/whl/cpu"
+
+[tool.uv.workspace]
+members = [
+    "benchmark",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+exclude = ["*/migrations/*.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"] # Error, Pyflakes, Isort, Bugbear, Pyupgrade
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

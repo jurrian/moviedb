@@ -1,16 +1,17 @@
 from django.db import models
 from pgvector.django import VectorField
 
+
 class ImdbMovie(models.Model):
     imdb_id = models.CharField(max_length=20, unique=True)
     title = models.CharField(max_length=460)
     original_title = models.CharField(max_length=460, blank=True)
-    title_type = models.ForeignKey('ImdbTitleType', on_delete=models.CASCADE)
+    title_type = models.ForeignKey("ImdbTitleType", on_delete=models.CASCADE)
     is_adult = models.BooleanField(default=False)
     start_year = models.IntegerField()
     end_year = models.IntegerField(null=True, blank=True)
     runtime_minutes = models.IntegerField(null=True, blank=True)
-    genres = models.ManyToManyField('ImdbGenre', through='ImdbMovieGenre')
+    genres = models.ManyToManyField("ImdbGenre", through="ImdbMovieGenre")
 
     # also_known = f" - also known as {t.original_title}" if t.original_title else ""
     # text = f"{t.title} ({t.start_year}){also_known}. {t.title_type}. " \
@@ -46,4 +47,4 @@ class ImdbMovieGenre(models.Model):
     genre = models.ForeignKey(ImdbGenre, on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = ('movie', 'genre')
+        unique_together = ("movie", "genre")
