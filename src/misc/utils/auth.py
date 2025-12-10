@@ -4,6 +4,8 @@ import secrets
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
+import streamlit as st
+from streamlit_cookies_manager import EncryptedCookieManager
 
 
 def send_magic_link_email(email):
@@ -28,13 +30,19 @@ def send_magic_link_email(email):
         fail_silently=False,
     )
 
-def ensure_activate_user(user: User):
+def ensure_activate_user(email: str):
     """Logging in for first time activates the user.
 
     This allows to track which Users are active and which are not.
     """
+    try:
+        user = User.objects.get(username=email)
+    except User.DoesNotExist:
+        return
+    
     if user.is_active:
         return
+    
     user.is_active = True
     user.save()
 
@@ -87,3 +95,38 @@ def get_user_from_session_key(session_key):
     if request.user.is_authenticated:
         return request.user
     return None
+
+
+def setup_cookies():
+    cookies = EncryptedCookieManager(
+        prefix="moviedb/",
+        password=settings.SECRET_KEY,
+    )
+
+    if not cookies.ready():
+        st.stop()
+
+    session_key = cookies.get("sessionid")
+
+    # Restore session from Cookie if present
+    if session_key:
+        session_user = get_user_from_session_key(session_key)
+        if session_user:
+            st.session_state["user"] = session_user
+        else:
+            # Invalid session in cookie
+            pass
+
+    return cookies
+
+
+def logout_user(session_key):
+    """
+    Logs out the user by clearing the Django session.
+    """
+    from django.contrib.auth import logout
+    
+    if session_key:
+        request = _get_django_request_with_session(session_key)
+        logout(request)
+

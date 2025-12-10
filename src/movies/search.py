@@ -8,7 +8,7 @@ from pgvector.django import CosineDistance
 from core.settings import env
 from misc.utils.embedding import combine_query_and_user, get_user_embedding
 
-from .models import MotnGenre, MotnShow
+from .models import MotnGenre, MotnShow, UserRecommendation, UserViewInteraction
 
 SYSTEM_PROMPT = """
 You are a query parser for a movie/series recommender.
@@ -126,7 +126,7 @@ def build_base_queryset(structured: dict):
     #     qs = qs.filter(year__gte=min_year)
     # if max_year:
     #     qs = qs.filter(year__lte=max_year)
-    return qs.distinct().prefetch_related("genres")
+    return qs.distinct()
 
 
 @mlflow.trace
@@ -152,7 +152,44 @@ def search_shows(raw_query: str, top_k: int = 20, user=None, alpha: float = 0.5,
     qs = (
         base_qs.exclude(embedding__isnull=True)
         .annotate(distance=CosineDistance("embedding", q_vec))
-        .order_by("distance")[:200]
+        .order_by("distance")[:top_k]
     )
 
     return qs, structured
+
+
+def update_user_recommendations(user):
+    """
+    Recalculates recommendations for the user based solely on their interactions.
+    Saves the result to UserRecommendation model.
+    """
+    if not user.is_authenticated:
+        return
+
+    # 1. Get user embedding based on interactions
+    u_vec = get_user_embedding(user)
+    
+    if not u_vec:
+        # If no embedding (e.g. no history), clear recommendations
+        UserRecommendation.objects.update_or_create(
+             user=user,
+             defaults={'recommended_shows': []}
+        )
+        return
+
+    # 2. Find shows similar to this embedding
+    # Exclude shows the user has already interacted with
+    watched_ids = UserViewInteraction.objects.filter(user=user).values_list('show_id', flat=True)
+    
+    qs = MotnShow.objects.exclude(id__in=watched_ids).exclude(embedding__isnull=True)
+    
+    # We use the user vector directly for similarity search
+    qs = qs.annotate(distance=CosineDistance("embedding", u_vec)).order_by("distance")[:50]
+    
+    recommended_ids = list(qs.values_list('id', flat=True))
+    
+    # 3. Save to UserRecommendation
+    UserRecommendation.objects.update_or_create(
+        user=user,
+        defaults={'recommended_shows': recommended_ids}
+    )

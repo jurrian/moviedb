@@ -1,6 +1,6 @@
 from .imdb import ImdbGenre, ImdbMovie, ImdbMovieGenre, ImdbTitleType
 from .motn import MotnGenre, MotnShow, MotnShowGenre
-from .user import UserViewInteraction
+from .user import UserRecommendation, UserViewInteraction
 
 __all__ = [
     "ImdbGenre",
@@ -11,4 +11,5 @@ __all__ = [
     "MotnShow",
     "MotnShowGenre",
     "UserViewInteraction",
+    "UserRecommendation",
 ]

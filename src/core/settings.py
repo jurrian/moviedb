@@ -35,6 +35,8 @@ INSTALLED_APPS = [
     # Packages
     "pgvector.django",
     "admin_numeric_filter",
+    #
+    #
     # Django
     "django.contrib.admin",
     "django.contrib.auth",
@@ -42,6 +44,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
+    #
     # Apps
     "movies",
 ]
