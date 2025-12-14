@@ -109,9 +109,20 @@ class MotnShow(models.Model):
     # Generated
 
     embedding = VectorField(dimensions=settings.OPENAI_EMBEDDING_DIM, null=True, blank=True)
-    # plot_embedding = VectorField(dimensions=settings.OPENAI_EMBEDDING_DIM, null=True, blank=True)
-    # meta_embedding = VectorField(dimensions=settings.OPENAI_EMBEDDING_DIM, null=True, blank=True)
-    # tone_embedding = VectorField(dimensions=settings.OPENAI_EMBEDDING_DIM, null=True, blank=True)
+    plot_embedding = VectorField(dimensions=settings.OPENAI_EMBEDDING_DIM, null=True, blank=True)
+    meta_embedding = VectorField(dimensions=settings.OPENAI_EMBEDDING_DIM, null=True, blank=True)
+    theme_embedding = VectorField(dimensions=settings.OPENAI_EMBEDDING_DIM, null=True, blank=True)
+    tone_embedding = VectorField(dimensions=settings.OPENAI_EMBEDDING_DIM, null=True, blank=True)
+    genre_embedding = VectorField(dimensions=settings.OPENAI_EMBEDDING_DIM, null=True, blank=True)
+    cast_embedding = VectorField(dimensions=settings.OPENAI_EMBEDDING_DIM, null=True, blank=True)
+    language_embedding = VectorField(dimensions=settings.OPENAI_EMBEDDING_DIM, null=True, blank=True)
+    tags_embedding = VectorField(dimensions=settings.OPENAI_EMBEDDING_DIM, null=True, blank=True)
+
+    generated_embedding_texts = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="The GPT-generated text parts used for specific embeddings (plot, meta, tone, tags).",
+    )
 
     relevant_queries = ArrayField(models.CharField(max_length=120, blank=True), null=True)
 
@@ -183,12 +194,113 @@ class MotnShow(models.Model):
         if self.age_certification:
             parts.append(f"Age rating: {self.age_certification}")
 
+        # Cast (top 5) and Directors (top 3)
+        if hasattr(self, "cast") and self.cast:
+            # Cast can be strings or dicts
+            cast_names = self._normalize_list_field(self.cast)
+            if cast_names:
+                parts.append("Starring: " + ", ".join(cast_names[:5]))
+        
+        if hasattr(self, "directors") and self.directors:
+            director_names = self._normalize_list_field(self.directors)
+            if director_names:
+                parts.append("Directed by: " + ", ".join(director_names[:3]))
+
+        # Tags / Keywords
+        if hasattr(self, "tags") and self.tags:
+            tag_names = self._normalize_list_field(self.tags)
+            if tag_names:
+                parts.append("Keywords: " + ", ".join(tag_names[:10]))
+
         # Plot (main semantic signal)
         if self.overview:
             parts.append("Plot: " + self.overview)
 
         return ". ".join(parts) + "."
-        #return self.overview
+
+    @property
+    def plot_embedding_text(self) -> str:
+        """
+        Text representation for plot semantic search.
+        """
+        parts = []
+        if self.title:
+            parts.append(f"Title: {self.title}")
+        if self.overview:
+            parts.append(f"Plot: {self.overview}")
+        return ". ".join(parts) + "."
+
+    @property
+    def meta_embedding_text(self) -> str:
+        """
+        Text representation for metadata (facts) search.
+        """
+        parts = []
+
+        # Title + year + type
+        if self.year:
+            parts.append(f"{self.title} ({self.year}) - {self.show_type or 'series'}")
+        else:
+            parts.append(f"{self.title} - {self.show_type or 'series'}")
+
+        if self.original_title:
+            parts.append(f"Also known as: {self.original_title}")
+
+        # Genres
+        genre_names = [g.name for g in self.genres.all()] if hasattr(self, "genres") else []
+        if genre_names:
+            parts.append("Genres: " + ", ".join([str(g) for g in genre_names]))
+
+        # Countries / language
+        if self.countries:
+            parts.append("Countries: " + ", ".join([str(c) for c in self.countries]))
+        if self.original_language:
+            parts.append(f"Language: {self.original_language}")
+        if self.age_certification:
+            parts.append(f"Age rating: {self.age_certification}")
+
+        # Cast (top 5) and Directors (top 3)
+        if hasattr(self, "cast") and self.cast:
+            cast_names = self._normalize_list_field(self.cast)
+            if cast_names:
+                parts.append("Starring: " + ", ".join(cast_names[:5]))
+        
+        if hasattr(self, "directors") and self.directors:
+            director_names = self._normalize_list_field(self.directors)
+            if director_names:
+                parts.append("Directed by: " + ", ".join(director_names[:3]))
+
+        # Tags / Keywords
+        if hasattr(self, "tags") and self.tags:
+            tag_names = self._normalize_list_field(self.tags)
+            if tag_names:
+                parts.append("Keywords: " + ", ".join(tag_names[:10]))
+
+        return ". ".join(parts) + "."
+
+    @property
+    def tone_embedding_text(self) -> str:
+        """
+        Text representation for tone/vibe search.
+        """
+        parts = []
+        
+        # Genres
+        genre_names = [g.name for g in self.genres.all()] if hasattr(self, "genres") else []
+        if genre_names:
+            parts.append("Genres: " + ", ".join([str(g) for g in genre_names]))
+            
+        # Keywords
+        if hasattr(self, "tags") and self.tags:
+            tag_names = self._normalize_list_field(self.tags)
+            if tag_names:
+                parts.append("Keywords: " + ", ".join(tag_names[:10]))
+
+        # Fallback to title if empty, to produce at least some vector separate from zero
+        if not parts:
+            parts.append(f"Title: {self.title}")
+
+        return ". ".join(parts) + "."
 
 
 class MotnGenre(models.Model):

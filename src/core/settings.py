@@ -170,6 +170,5 @@ else:
 
 
 # Application settings
-
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-large"
 OPENAI_EMBEDDING_DIM = 3072

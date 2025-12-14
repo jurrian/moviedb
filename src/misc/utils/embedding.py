@@ -29,16 +29,23 @@ def calculate_user_embedding(interactions_data):
             continue
 
         emb = np.array(show_emb, dtype=float)
-        
-        # Define a simple weight:
-        if rating == 2:  # way up
-            w = 3.0
-        elif rating == 1:  # up
-            w = 2.0
-        elif rating == 0:  # down
-            w = 0.2
+
+        if rating == 2:  # way up (double thumbs up)
+            r_weight = 5.0
+        elif rating == 1:  # up (thumbs up)
+            r_weight = 3.0
+        elif rating == 0:  # down (thumbs down)
+            r_weight = 0.0
         else:
-            w = 1.0
+            # Unrated / watched: lower confidence than explicit like
+            r_weight = 0.5
+
+        # Temporal weight: linearly increase from 0.5 to 1.0 based on position
+        # We assume interactions_data is sorted by time (oldest -> newest)
+        t_weight = 0.5 + (0.5 * (i / max(1, len(interactions_data) - 1)))
+
+        # Combined weight
+        w = r_weight * t_weight
 
         embs.append(emb)
         weights.append(w)

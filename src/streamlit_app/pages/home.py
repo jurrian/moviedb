@@ -11,7 +11,32 @@ def load_css():
 
 def main_page():
     from misc.utils.version import get_app_version
+    from django.conf import settings
     load_css()
+
+    # Initialize trigger
+    if "trigger_search" not in st.session_state:
+        st.session_state.trigger_search = False
+
+    # Initialize session state from URL if present
+    if "search_query" not in st.session_state:
+        params = st.query_params
+        if "q" in params and params["q"]:
+            st.session_state.search_query = params["q"]
+            st.session_state.trigger_search = True
+        else:
+            st.session_state.search_query = ""
+
+    # Callback to update URL when text changes
+    def update_url_from_input():
+        # Update URL
+        val = st.session_state.search_query
+        if val:
+            st.query_params["q"] = val
+            # st.session_state.trigger_search = True # Trigger search on enter/blur
+        else:
+            if "q" in st.query_params:
+                del st.query_params["q"]
 
     # Handle deferred recommendation updates (e.g. from Netflix page)
     if st.session_state.get("recommendations_need_update") and st.session_state.get("user"):
@@ -33,7 +58,8 @@ def main_page():
         "Describe what you want to watch:",
         height=150, # Slightly taller for dominance
         key="search_query", 
-        help="Type a description of the plot, mood, or setting you are looking for."
+        help="Type a description of the plot, mood, or setting you are looking for.",
+        on_change=update_url_from_input
     )
 
     with st.expander("⚙️ Search Options", expanded=False):
@@ -49,31 +75,36 @@ def main_page():
         ("🏙️", "Feel-good 90s rom-com playing in New York"),
     ]
 
-    # Initialize session state for query if not exists
-    if "search_query" not in st.session_state:
-        st.session_state.search_query = ""
-    # Initialize trigger
-    if "trigger_search" not in st.session_state:
-        st.session_state.trigger_search = False
+
 
     # Display examples as 2x2 grid of buttons
     def update_query(text):
         st.session_state.search_query = text
+        st.query_params["q"] = text
         st.session_state.trigger_search = True
 
     col1, col2 = st.columns(2)
     for i, (icon, ex) in enumerate(examples):
         col = col1 if i % 2 == 0 else col2
         # Use a secondary button style (default) which our CSS targets for subtle look
-        col.button(f"{icon}  {ex}", use_container_width=True, key=f"ex_{i}", on_click=update_query, args=(ex,))
+        col.button(f"{icon}  {ex}", width="stretch", key=f"ex_{i}", on_click=update_query, args=(ex,))
 
     # --- Search Action ---
     # Centered 'Find Movies' button or full width? Full width is good.
-    search_clicked = st.button("🚀 Find Movies", type="primary", use_container_width=True)
+    search_clicked = st.button("🚀 Find Movies", type="primary", width="stretch")
     
     # Initialize persistent state for search results
     if "search_results" not in st.session_state:
         st.session_state.search_results = []
+    
+    # Check for stale results (missing new annotations) and clear if found
+    if st.session_state.search_results:
+        first = st.session_state.search_results[0]
+        if not hasattr(first, "dist_main"):
+            st.warning("Search structure updated. Clearing old results. Please search again.")
+            st.session_state.search_results = []
+            st.session_state.search_metadata = {}
+            
     if "visible_count" not in st.session_state:
         st.session_state.visible_count = top_k
 
@@ -87,12 +118,21 @@ def main_page():
                 user_id = st.session_state["user"].id if st.session_state.get("user") else None
                 # Always fetch 200 results
                 results, structured = search_shows(query.strip(), top_k=200, user=user_id)
+                if settings.DEBUG:
+                    st.json(structured)
                 # Store results in session state to persist across reruns
                 st.session_state.search_results = list(results)
+                # Store metadata for explanation
+                st.session_state.search_metadata = structured.get("result_metadata_dump") or {
+                    "weights_used": structured.get("weights", {}),
+                    "alpha": 0.5 # default
+                }
+                
                 # Reset visible count to the user's selected top_k
                 st.session_state.visible_count = top_k
         else:
              st.session_state.search_results = []
+             st.session_state.search_metadata = {}
 
     # If no active search results, check if we can populate with user recommendations
     if not st.session_state.search_results and not query.strip() and st.session_state.get("user"):
@@ -117,7 +157,7 @@ def main_page():
             with col_tip:
                 st.info("💡 **Tip:** Log in to get personalized recommendations based on your unique taste!")
             with col_btn:
-                if st.button("Log in", use_container_width=True):
+                if st.button("Log in", width="stretch"):
                     st.switch_page("Login")
 
         st.markdown("---")
@@ -141,13 +181,10 @@ def main_page():
 
                 with col2:
                     # Title and Year (Custom div to remove anchor)
-                    st.markdown(
-                        f"""<div style="font-size: 1.8rem; font-weight: 700; color: var(--text-color); margin-bottom: 0.5rem;">
-                            {show.title} 
-                            <span style='font-size: 1.2rem; color: #888; font-weight: 400;'>({show.year or 'n/a'})</span>
-                        </div>""", 
-                        unsafe_allow_html=True
-                    )
+                    title_html = f"""<div style="font-size: 1.8rem; font-weight: 700; color: var(--text-color); margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between;">
+                            <span>{show.title} <span style='font-size: 1.2rem; color: #888; font-weight: 400;'>({show.year or 'n/a'})</span></span>
+                        </div>"""
+                    st.markdown(title_html, unsafe_allow_html=True)
                     
                     # Metadata Badges
                     badges = []
@@ -162,13 +199,96 @@ def main_page():
                     # Overview
                     st.write(show.overview)
 
-                    # Watch Link
-                    try:
-                        if show.streaming_options and "nl" in show.streaming_options and show.streaming_options["nl"]:
-                            link = show.streaming_options["nl"][0]["videoLink"]
-                            st.link_button("▶️ Watch on Netflix", link, type="secondary")
-                    except (KeyError, IndexError, TypeError):
-                        pass
+                    # Actions Row (Info + Watch)
+                    # Use smaller columns for buttons to keep them close
+                    btn_col1, btn_col2, _ = st.columns([0.35, 0.25, 0.4])
+
+                    with btn_col1:
+                         # Watch Link
+                        try:
+                            if show.streaming_options and "nl" in show.streaming_options and show.streaming_options["nl"]:
+                                link = show.streaming_options["nl"][0]["videoLink"]
+                                st.link_button("▶️ Watch on Netflix", link, type="secondary")
+                        except (KeyError, IndexError, TypeError):
+                            pass
+                    
+                    with btn_col2:
+                        # Info Popover
+                        # Check if we have explanation data (only if query was run)
+                        if hasattr(show, "weighted_distance"):
+                            with st.popover("ℹ️ Why?", use_container_width=True):
+                                st.markdown("### 🔍 Match Breakdown")
+                                st.caption("Lower distance = Better match")
+                                st.markdown(f"**Total Score:** `{show.weighted_distance:.3f}`")
+                                
+                                # Retrieve weights from session state metadata if available
+                                weights = {}
+                                if "search_metadata" in st.session_state and st.session_state.search_metadata:
+                                     weights = st.session_state.search_metadata.get("weights_used", {})
+
+                                # Build data table
+                                data = []
+                                # Fields to check
+                                fields = ["plot", "cast", "genre", "tow", "tags", "meta", "language", "main"]
+                                # Mapping for display
+                                labels = {
+                                    "main": "Hypothetical Match (General)",
+                                    "plot": "Plot / Story",
+                                    "cast": "Cast & Crew",
+                                    "genre": "Genre",
+                                    "tone": "Tone / Vibe",
+                                    "tags": "Keywords",
+                                    "meta": "Metadata (Year/Type)",
+                                    "language": "Language"
+                                }
+
+                                for key in labels:
+                                    attr = f"dist_{key}"
+                                    if hasattr(show, attr):
+                                        dist = getattr(show, attr)
+                                        w = weights.get(key, 0.5) # Default/fallback
+                                        # Contribution = w * dist
+                                        contrib = w * (dist if dist is not None else 2.0)
+                                        
+                                        # Formatting
+                                        dist_str = f"{dist:.2f}" if dist is not None else "N/A"
+                                        
+                                        # Highlight strong weights
+                                        weight_display = f"**{w:.1f}**" if w > 0.6 else f"{w:.1f}"
+                                        
+                                        data.append({
+                                            "Factor": labels[key],
+                                            "Weight": weight_display,
+                                            "Dist": dist_str,
+                                            "Score": f"{contrib:.2f}"
+                                        })
+                                
+                                # Render table
+                                st.dataframe(data, hide_index=True, use_container_width=True)
+                                
+                                st.info("The Total Score is the sum of all component scores. Shows with the lowest Total Score appear first.")
+                                
+                                # Deep Analysis Button
+                                if st.button("🕵️ Deep Analysis", key=f"analyze_{show.id}", type="primary"):
+                                    with st.spinner("Asking AI to explain the match..."):
+                                        from movies.search import analyze_search_result
+                                        
+                                        # Reconstruct component dists dict
+                                        comp_dists = {}
+                                        for k in labels:
+                                            attr = f"dist_{k}"
+                                            if hasattr(show, attr):
+                                                val = getattr(show, attr)
+                                                comp_dists[k] = val if val is not None else 2.0
+                                        
+                                        analysis = analyze_search_result(
+                                            raw_query=st.session_state.search_query,
+                                            show_obj=show,
+                                            structured=st.session_state.search_metadata.get("structured", {}),
+                                            component_dists=comp_dists
+                                        )
+                                        st.markdown("### 🤖 AI Explanation")
+                                        st.markdown(analysis)
                 
                 st.markdown("---")
         
@@ -177,7 +297,7 @@ def main_page():
              def load_more():
                  st.session_state.visible_count += top_k
              
-             st.button("🔽 Load more results", on_click=load_more, type="secondary", use_container_width=True)
+             st.button("🔽 Load more results", on_click=load_more, type="secondary", width="stretch")
 
     elif search_clicked:
          st.warning("No matches found. Try a different description!")
