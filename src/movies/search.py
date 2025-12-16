@@ -138,22 +138,22 @@ def _clean_genre_list(genres):
 def build_base_queryset(structured: dict):
     qs = MotnShow.objects.all()
 
-    # # must_be_series / must_be_movie
-    # if structured.get("must_be_series"):
-    #     qs = qs.filter(show_type__iexact="series")
-    # elif structured.get("must_be_movie"):
-    #     qs = qs.filter(show_type__iexact="movie")
-    #
-    # # hard genre includes/excludes (MotnGenre M2M)
-    # for genre in _clean_genre_list(structured.get("must_genres")):
-    #     qs = qs.filter(genres__name__iexact=genre)
-    #
-    # # should_genres = _clean_genre_list(structured.get("should_genres"))
-    # # if should_genres:
-    # #     qs = qs.filter(genres__name__in=should_genres)
-    #
-    # for genre in _clean_genre_list(structured.get("exclude_genres")):
-    #     qs = qs.exclude(genres__name__iexact=genre)
+    # must_be_series / must_be_movie
+    if structured.get("must_be_series"):
+        qs = qs.filter(show_type__iexact="series")
+    elif structured.get("must_be_movie"):
+        qs = qs.filter(show_type__iexact="movie")
+    
+    # hard genre includes/excludes (MotnGenre M2M)
+    for genre in _clean_genre_list(structured.get("must_genres")):
+        qs = qs.filter(genres__name__iexact=genre)
+    
+    # should_genres = _clean_genre_list(structured.get("should_genres"))
+    # if should_genres:
+    #     qs = qs.filter(genres__name__in=should_genres)
+    
+    for genre in _clean_genre_list(structured.get("exclude_genres")):
+        qs = qs.exclude(genres__name__iexact=genre)
     #
     # # optional: min_year / max_year
     # min_year = structured.get("min_year")

@@ -147,6 +147,8 @@ def main_page():
 
     # Display results from session state
     results = st.session_state.search_results
+
+    # TODO: give feedback if ambiguous search
     
     if results:
         st.markdown("<br>", unsafe_allow_html=True)

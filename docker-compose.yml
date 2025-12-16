@@ -20,6 +20,7 @@ services:
   # dev.moviedb.nl
   develop:
     build:
+      # TODO: build the correct branch
       context: .
       dockerfile: Dockerfile
     ports:
