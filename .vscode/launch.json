@@ -13,6 +13,17 @@
                 "run",
                 "src/streamlit_app/main.py"
             ]
+        },
+        {
+            "name": "import_netflix",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "import_netflix"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}/src/manage.py"
         }
     ]
 }
