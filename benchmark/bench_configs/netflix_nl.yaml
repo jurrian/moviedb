@@ -1,0 +1,7 @@
+experiment_name: "search_shows"
+dataset: "netflix_nl_v1"
+snapshot_id: "snapshot_2025_02_01_netflix_nl_v1"
+k_values: [5, 10, 20]
+notes: "Baseline with OpenAI text-embedding-3-large, Netflix NL snapshot Feb 1 2025"
+test_suites:
+  - "benchmark.testcases.netflix_nl"

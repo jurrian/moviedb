@@ -1,0 +1,25 @@
+{
+  "info": {
+    "run_id": "a00d63e35c274fd0a75480b257872247",
+    "experiment_id": "5",
+    "status": "FINISHED",
+    "start_time": 1764943395787,
+    "end_time": 1764943486436,
+    "artifact_uri": "mlflow-artifacts:/5/a00d63e35c274fd0a75480b257872247/artifacts"
+  },
+  "data": {
+    "metrics": {
+      "hit/mean": 0.8339622641509434,
+      "rank_score/mean": 0.8933079304596333
+    },
+    "params": {},
+    "tags": {
+      "mlflow.user": "jurrian",
+      "mlflow.source.name": "/home/jurrian/develop/moviedb/benchmark/test.py",
+      "mlflow.source.type": "LOCAL",
+      "mlflow.source.git.commit": "c8017a30febdbdfe90c9b6d9186b3066283e2f82",
+      "mlflow.runName": "evaluate_100_shows",
+      "mlflow.run.isEval": "true"
+    }
+  }
+}

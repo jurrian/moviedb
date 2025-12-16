@@ -10,8 +10,8 @@ import django
 import mlflow
 from mlflow.genai.scorers import scorer
 from openai import AsyncOpenAI
+import random
 
-mlflow.set_tracking_uri("sqlite:///mlflow.db")
 mlflow.set_experiment("query_recommends")
 mlflow.openai.autolog()
 
@@ -289,13 +289,15 @@ def evaluate_search_shows(target_count=100):
 
     eval_dataset = []
     for show in shows:
-        for query in show.relevant_queries or []:
-            eval_dataset.append(
-                {
-                    "inputs": {"query": query},
-                    "expectations": {"target_show": str(show)},
-                }
-            )
+        if not show.relevant_queries:
+            continue
+        query = random.choice(show.relevant_queries)
+        eval_dataset.append(
+            {
+                "inputs": {"query": query},
+                "expectations": {"target_show": str(show)},
+            }
+        )
 
     mlflow.set_tag("mlflow.runName", "evaluate_random")
     mlflow.genai.evaluate(
@@ -306,6 +308,6 @@ def evaluate_search_shows(target_count=100):
 
 
 if __name__ == "__main__":
-    target_count = 50
-    generate_user_queries(target_count=target_count)
+    target_count = 1000
+    # generate_user_queries(target_count=target_count)
     evaluate_search_shows(target_count=target_count)

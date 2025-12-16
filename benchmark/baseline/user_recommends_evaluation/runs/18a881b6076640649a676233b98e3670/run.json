@@ -1,0 +1,21 @@
+{
+  "info": {
+    "run_id": "18a881b6076640649a676233b98e3670",
+    "experiment_id": "6",
+    "status": "FAILED",
+    "start_time": 1764977632745,
+    "end_time": 1764977632973,
+    "artifact_uri": "mlflow-artifacts:/6/18a881b6076640649a676233b98e3670/artifacts"
+  },
+  "data": {
+    "metrics": {},
+    "params": {},
+    "tags": {
+      "mlflow.user": "jurrian",
+      "mlflow.source.name": "benchmark/evaluate_recs.py",
+      "mlflow.source.type": "LOCAL",
+      "mlflow.source.git.commit": "c8017a30febdbdfe90c9b6d9186b3066283e2f82",
+      "mlflow.runName": "leave_one_out_eval"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "experiment_id": "6",
+  "name": "user_recommends_evaluation",
+  "artifact_location": "mlflow-artifacts:/6",
+  "lifecycle_stage": "active",
+  "tags": {
+    "mlflow.experimentKind": "genai_development"
+  }
+}

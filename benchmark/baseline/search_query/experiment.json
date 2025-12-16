@@ -1,0 +1,9 @@
+{
+  "experiment_id": "5",
+  "name": "search_query",
+  "artifact_location": "mlflow-artifacts:/5",
+  "lifecycle_stage": "active",
+  "tags": {
+    "mlflow.experimentKind": "genai_development"
+  }
+}
